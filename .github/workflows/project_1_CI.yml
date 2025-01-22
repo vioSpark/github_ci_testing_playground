@@ -13,15 +13,15 @@ jobs:
   build_and_test:
     if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
-    # strategy:
-    #   matrix:
-    #     dotnet-version : ['8.x']
+    strategy:
+      matrix:
+        dotnet-version : ['8.x']
 
     steps:
       - uses: actions/checkout@v4
-      # - uses: actions/setup-dotnet@v3
-      #   with:
-      #     dotnet-version: ${{ matrix.dotnet-version }}
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ matrix.dotnet-version }}
       - uses: dorny/paths-filter@v3
         id: project_change_filter
         with:
@@ -31,11 +31,16 @@ jobs:
               project_2_files_changed:
               - 'project_2/**'
 
-      - name : test filter values
+      - name : DEBUG
         run : |
             echo "hello world"
-            echo "project_1_files_changed :: ${{steps.project_change_filter.outputs.project_1_files_changed}}"
-            echo "project_2_files_changed :: ${{steps.project_change_filter.outputs.project_2_files_changed}}"
+            echo "project_1_files_changed: ${{steps.project_change_filter.outputs.project_1_files_changed}}"
+            echo "project_2_files_changed: ${{steps.project_change_filter.outputs.project_2_files_changed}}"
+            echo "debug info:"
+            echo "The current workspace of GITHUB_WORKSPACE is:"
+            echo $GITHUB_WORKSPACE
+            echo "The current workspace of github.workspace is: echo ${{github.workspace}}"
+            dotnet --version
       - name: Test project1
         if: steps.project_change_filter.outputs.project_1_files_changed == 'true'
         run: |
