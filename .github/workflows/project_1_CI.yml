@@ -1,5 +1,5 @@
 
-name: mtm_file_processor
+name: test workflow
 
 on:
   push:
@@ -31,13 +31,19 @@ jobs:
               project_2_files_changed:
               - 'project_2/**'
 
-      - name : test value
+      - name : test filter values
         run : |
             echo "hello world"
-            echo "FILTERVAL :: ${{steps.project_change_filter.outputs.project_1_files_changed}}"
-      - name: Test Traco Base
+            echo "project_1_files_changed :: ${{steps.project_change_filter.outputs.project_1_files_changed}}"
+            echo "project_2_files_changed :: ${{steps.project_change_filter.outputs.project_2_files_changed}}"
+      - name: Test project1
         if: steps.project_change_filter.outputs.project_1_files_changed == 'true'
         run: |
-            echo "hello world"
+            echo "running CI because project 1 files changed"
+      - name: Test project2
+        if: steps.project_change_filter.outputs.project_2_files_changed == 'true'
+        run: |
+            echo "running CI because project 2 files changed"
+            
 
 
