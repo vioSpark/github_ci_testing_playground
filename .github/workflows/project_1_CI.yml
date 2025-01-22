@@ -2,13 +2,14 @@
 name: mtm_file_processor
 
 on:
+  push:
   workflow_dispatch:
-  pull_request_review:
-    types: [submitted]
+  # pull_request_review:
+  #   types: [submitted]
 
 jobs:
   build_and_test:
-    if: github.event.review.state == 'approved'
+    # if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
     # strategy:
     #   matrix:
