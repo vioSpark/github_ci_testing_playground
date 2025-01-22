@@ -1,0 +1,39 @@
+
+name: mtm_file_processor
+
+on:
+  workflow_dispatch:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  build_and_test:
+    if: github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    # strategy:
+    #   matrix:
+    #     dotnet-version : ['8.x']
+
+    steps:
+      - uses: actions/checkout@v4
+      # - uses: actions/setup-dotnet@v3
+      #   with:
+      #     dotnet-version: ${{ matrix.dotnet-version }}
+      - uses: dorny/paths-filter@v3
+        id: project_change_filter
+        with:
+          filters: |
+              project_1_files_changed:
+              - 'project_1/**'
+              project_2_files_changed:
+              - 'project_2/**'
+
+      - name : test value
+        run : |
+            echo "FILTERVAL :: ${{steps.project_change_filter.outputs.project_1_files_changed}}"
+      - name: Test Traco Base
+        if: steps.project_change_filter.outputs.project_1_files_changed == 'true'
+        run: |
+            echo "hello world"
+
+
