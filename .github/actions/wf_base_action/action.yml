@@ -21,7 +21,7 @@ jobs:
         - name: Setup .NET
           uses: actions/setup-dotnet@v3
           with:
-            dotnet-version: ${{ inputs.dotnet-version }}
+            dotnet-version: ${{ github.event.inputs.dotnet-version }}
         - name: .Net Version (debug)
           run: dotnet --version
         - name: Print Workspace (debug)
@@ -31,6 +31,6 @@ jobs:
             echo "The current workspace of github.workspace is"
             echo ${{github.workspace}}
         - name: Build
-          run: dotnet build ${{inputs.test-project-folder}} --configuration Release
+          run: dotnet build ${{github.event.inputs.test-project-folder}} --configuration Release
         - name: Test
-          run: dotnet test ${{inputs.test-project-folder}} --no-build --configuration Release
+          run: dotnet test ${{github.event.inputs.test-project-folder}} --no-build --configuration Release
