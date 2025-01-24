@@ -19,6 +19,7 @@ runs:
         shell: bash
         run: dotnet --version
       - name: Print Workspace (debug)
+        shell: bash
         run: |
           echo "The current workspace of GITHUB_WORKSPACE is:"
           echo $GITHUB_WORKSPACE
