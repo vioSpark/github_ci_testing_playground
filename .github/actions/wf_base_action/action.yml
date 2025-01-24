@@ -14,12 +14,9 @@ inputs:
 runs:
   using: "composite"
   steps:
-      - uses: actions/checkout@v3
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: ${{inputs.dotnet-version}}
+      # assumes that .net has been setup by prev step
       - name: .Net Version (debug)
+        shell: bash
         run: dotnet --version
       - name: Print Workspace (debug)
         run: |
@@ -28,6 +25,8 @@ runs:
           echo "The current workspace of github.workspace is"
           echo ${{github.workspace}}
       - name: Build
+        shell: bash
         run: dotnet build ${{inputs.test-project-folder}} --configuration Release
       - name: Test
+        shell: bash
         run: dotnet test ${{inputs.test-project-folder}} --no-build --configuration Release
