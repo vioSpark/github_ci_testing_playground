@@ -40,10 +40,9 @@ jobs:
             echo $GITHUB_WORKSPACE
             echo "The current workspace of github.workspace is: echo ${{github.workspace}}"
             dotnet --version
-            ls -la ${{github.workspace}}/.github/workflows
       - name: call local action for project 1
         # if: steps.project_change_filter.outputs.project_1_files_changed == 'true' && github.event.review.state == 'approved'
-        uses: ./.github/workflows/wf_base.yml
+        uses: .github/actions/wf_base_action/action.yml
         with: 
           test-project-folder: ./project_1
           dotnet-version: ${{ matrix.dotnet-version }}
