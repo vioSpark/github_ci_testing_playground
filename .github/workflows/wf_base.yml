@@ -1,0 +1,36 @@
+name: Workflow Base
+
+on:
+  #   workflow_dispatch: - doesn't make sense to call dispatch without default variables
+  workflow_call:
+    inputs:
+        test-project-folder:
+            required: true
+            type: string
+        dotnet-version: 
+            description: 'This is work in progress .. need to support a pass-down matrix strategy'
+            required: false
+            default: '8.x'
+            type: string
+            # TODO: figure out how this works .. maybe just call the reusable for each individual strategy in the matrix?
+jobs:
+  reusable_dotnet_build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v3
+        - name: Setup .NET
+          uses: actions/setup-dotnet@v3
+          with:
+            dotnet-version: ${{ inputs.dotnet-version }}
+        - name: .Net Version (debug)
+          run: dotnet --version
+        - name: Print Workspace (debug)
+          run: |
+            echo "The current workspace of GITHUB_WORKSPACE is:"
+            echo $GITHUB_WORKSPACE
+            echo "The current workspace of github.workspace is"
+            echo ${{github.workspace}}
+        - name: Build
+          run: dotnet build ${{inputs.test-project-folder}} --configuration Release
+        - name: Test
+          run: dotnet test ${{inputs.test-project-folder}} --no-build --configuration Release
