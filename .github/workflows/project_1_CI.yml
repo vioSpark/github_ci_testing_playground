@@ -13,7 +13,7 @@ jobs:
   testing_how_needs_work:
     strategy:
       matrix:
-        version : ['8.x', '6.x']
+        version : ['6', '8']
     runs-on: ubuntu-latest
     outputs:
       simple_value_1: ${{ steps.step_1.outputs.test_value }}
@@ -57,7 +57,7 @@ jobs:
           
       - name: test in-between job data transfers
         run : |
-            echo '${{ toJson(needs.testing_how_needs_work.outputs) }}'
+            echo '${{ toJson(needs.testing_how_needs_work) }}'
 
       - name: call local action for project 1
         # if: steps.project_change_filter.outputs.project_1_files_changed == 'true' && github.event.review.state == 'approved'
