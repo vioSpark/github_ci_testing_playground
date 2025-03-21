@@ -16,13 +16,15 @@ jobs:
         version : ['6', '8']
     runs-on: ubuntu-latest
     outputs:
+      simple_value_version_without_version: ${{ steps.step_1.outputs.test }}
       simple_value_version_6: ${{ steps.step_1.outputs.test_value_6 }}
       simple_value_version_8: ${{ steps.step_1.outputs.test_value_8 }}
     steps:
       - id: step_1
         run: |
           version="${{ matrix.version }}"
-          echo "test_value_${version}=testing_w_static_value" >> "$$GITHUB_OUTPUT"
+          echo "test_value_${version}=testing_w_static_value" >> "$GITHUB_OUTPUT"
+          echo "test=testing_wo_matrix" >> "$GITHUB_OUTPUT"
 
   build_and_test:
     needs: testing_how_needs_work
