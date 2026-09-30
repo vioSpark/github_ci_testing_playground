@@ -25,21 +25,23 @@ jobs:
     - name: Test Demo
       run: dotnet test "./demo/Demo.Worker.Tests" --configuration Release --logger "console;verbosity=detailed"
 
+    # NuGet restore drops a TargetFramework global property, so -p:TargetFramework fails with NETSDK1005.
+    # Instead, flip the csproj carve-out itself: it keys on RUNNER_OS.
     # Experiment: can the tests run against the Windows target on Linux?
     - name: Test Demo against net8.0-windows (experiment)
       if: inputs.publish
       continue-on-error: true
-      run: dotnet test "./demo/Demo.Worker.Tests" --configuration Release -p:TargetFramework=net8.0-windows -p:EnableWindowsTargeting=true --logger "console;verbosity=detailed"
+      run: dotnet test "./demo/Demo.Worker.Tests" --configuration Release -p:RUNNER_OS=Windows -p:EnableWindowsTargeting=true --logger "console;verbosity=detailed"
 
     # Experiment: is EnableWindowsTargeting needed for a plain net8.0-windows worker?
     - name: Publish win-x64 without EnableWindowsTargeting (experiment)
       id: publish_plain
       if: inputs.publish
       continue-on-error: true
-      run: dotnet publish "./demo/Demo.Worker/Demo.Worker.csproj" -c Release -r win-x64 -p:TargetFramework=net8.0-windows -o out
+      run: dotnet publish "./demo/Demo.Worker/Demo.Worker.csproj" -c Release -r win-x64 -p:RUNNER_OS=Windows -o out
     - name: Publish win-x64 with EnableWindowsTargeting
       if: inputs.publish && steps.publish_plain.outcome == 'failure'
-      run: dotnet publish "./demo/Demo.Worker/Demo.Worker.csproj" -c Release -r win-x64 -p:TargetFramework=net8.0-windows -p:EnableWindowsTargeting=true -o out
+      run: dotnet publish "./demo/Demo.Worker/Demo.Worker.csproj" -c Release -r win-x64 -p:RUNNER_OS=Windows -p:EnableWindowsTargeting=true -o out
     - name: Inspect artifact
       if: inputs.publish
       run: |
