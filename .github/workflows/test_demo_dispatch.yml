@@ -1,17 +1,13 @@
-name: Test Demo
+name: Test and publish Demo
 
 on:
   workflow_dispatch:
-    inputs:
-      publish:
-        description: 'Also publish the win-x64 artifact'
-        type: boolean
-        default: false
   workflow_call:
     inputs:
-      publish:
+      test_only:
+        description: 'Callers (the PR check) only test; a direct dispatch tests and publishes'
         type: boolean
-        default: false
+        default: true
 
 jobs:
   run_demo_tests:
@@ -23,34 +19,7 @@ jobs:
       with:
         dotnet-version: '8.x'
     - name: Test Demo
-      run: dotnet test "./demo/Demo.Worker.Tests" --configuration Release --logger "console;verbosity=detailed"
-
-    # NuGet restore drops a TargetFramework global property, so -p:TargetFramework fails with NETSDK1005.
-    # Instead, flip the csproj carve-out itself: it keys on RUNNER_OS.
-    # Experiment: can the tests run against the Windows target on Linux?
-    - name: Test Demo against net8.0-windows (experiment)
-      if: inputs.publish
-      continue-on-error: true
-      run: dotnet test "./demo/Demo.Worker.Tests" --configuration Release -p:RUNNER_OS=Windows -p:EnableWindowsTargeting=true --logger "console;verbosity=detailed"
-
-    # Experiment: is EnableWindowsTargeting needed for a plain net8.0-windows worker?
-    - name: Publish win-x64 without EnableWindowsTargeting (experiment)
-      id: publish_plain
-      if: inputs.publish
-      continue-on-error: true
-      run: dotnet publish "./demo/Demo.Worker/Demo.Worker.csproj" -c Release -r win-x64 -p:RUNNER_OS=Windows -o out
-    - name: Publish win-x64 with EnableWindowsTargeting
-      if: inputs.publish && steps.publish_plain.outcome == 'failure'
-      run: dotnet publish "./demo/Demo.Worker/Demo.Worker.csproj" -c Release -r win-x64 -p:RUNNER_OS=Windows -p:EnableWindowsTargeting=true -o out
-    - name: Inspect artifact
-      if: inputs.publish
-      run: |
-        ls -la out
-        file out/Demo.Worker.exe out/Demo.Worker.dll
-        grep -c "net8.0-windows" out/Demo.Worker.dll && echo "dll contains the Windows flavor string"
-    - uses: actions/upload-artifact@v4
-      if: inputs.publish
-      with:
-        name: Demo-win-x64-${{ github.sha }}
-        path: out
-        retention-days: 1
+      run: dotnet test "./demo/Demo.Worker.Tests" --configuration Release
+    - name: Publish Demo
+      if: ${{ !inputs.test_only }}
+      run: echo "PUBLISH STEP RAN (event=${{ github.event_name }}, test_only='${{ inputs.test_only }}')"

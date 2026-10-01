@@ -1,0 +1,9 @@
+name: Demo caller (like the PR check)
+
+on:
+  push:
+    branches: [ci/publish-in-test-workflow]
+
+jobs:
+  call_demo:
+    uses: ./.github/workflows/test_demo_dispatch.yml
