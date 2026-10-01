@@ -1,8 +1,13 @@
-name: Test Demo
+name: Test and publish Demo
 
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      test_only:
+        description: 'Callers (the PR check) only test; a direct dispatch tests and publishes'
+        type: boolean
+        default: true
 
 jobs:
   run_demo_tests:
@@ -14,4 +19,7 @@ jobs:
       with:
         dotnet-version: '8.x'
     - name: Test Demo
-      run: dotnet test "./demo/Demo.Worker.Tests" --configuration Release --logger "console;verbosity=detailed"
+      run: dotnet test "./demo/Demo.Worker.Tests" --configuration Release
+    - name: Publish Demo
+      if: ${{ !inputs.test_only }}
+      run: echo "PUBLISH STEP RAN (event=${{ github.event_name }}, test_only='${{ inputs.test_only }}')"
