@@ -1,0 +1,22 @@
+# Test of one question: does a red job that runs after a green required check block the merge?
+# Ruleset "required-check-test" on branch test/required-check-base requires only the check "required_gate".
+# The pull request into that branch is never merged.
+name: Required check hypothesis
+
+on:
+  pull_request:
+    branches: [test/required-check-base]
+
+jobs:
+  required_gate:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "The required check passes."
+
+  downstream_red:
+    needs: required_gate
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "This job starts after the required check and fails on purpose."
+          exit 1
