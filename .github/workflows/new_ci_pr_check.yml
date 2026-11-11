@@ -1,0 +1,127 @@
+# Mirror of traco6.0's call_workflow_automatically_PR_based.yml with three dummy modules (A, B, C), to test the
+# all_module_tests gate before it goes to traco6.0. Identical to traco6.0: the review and dispatch triggers, the
+# test_changed condition, the module job conditions, reusable module workflows with an 8.x matrix, and the gate job.
+# PLAYGROUND ONLY (marked below): the label sim-approve stands in for an approving review, so the gate can be tested
+# without a second reviewer; and labels make jobs fail or run slowly (see the module workflows).
+name: New CI PR check
+
+on:
+  workflow_dispatch:
+  pull_request_review:
+    types: [submitted, edited]
+  # PLAYGROUND ONLY: label changes and pushes start a run; with label sim-approve it acts like an approving review
+  pull_request:
+    types: [synchronize, labeled, unlabeled]
+
+jobs:
+  test_changed:
+    name: Test if changed files correspond to any of the filters
+    outputs:
+      moduleA_changed: ${{ steps.project_change_filter.outputs.ModuleA }}
+      moduleB_changed: ${{ steps.project_change_filter.outputs.ModuleB }}
+      moduleC_changed: ${{ steps.project_change_filter.outputs.ModuleC }}
+    # PLAYGROUND ONLY: the third condition (sim-approve); traco6.0 has only the first two
+    if: ${{github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'sim-approve'))}}
+    runs-on: ubuntu-latest
+    permissions: read-all
+    steps:
+    - uses: actions/checkout@v7
+    - uses: dorny/paths-filter@v4
+      id: project_change_filter
+      with:
+        filters: |
+            ModuleA:
+              - 'modules/A/**'
+            ModuleB:
+              - 'modules/B/**'
+            ModuleC:
+              - 'modules/C/**'
+    # PLAYGROUND ONLY: label fail-filter makes test_changed fail
+    - name: Fail when the pull request has the label fail-filter
+      if: ${{ contains(github.event.pull_request.labels.*.name, 'fail-filter') }}
+      run: exit 1
+
+  run_moduleA_tests:
+    needs: test_changed
+    if: ${{ needs.test_changed.outputs.moduleA_changed == 'true' || github.event_name == 'workflow_dispatch' }}
+    uses: ./.github/workflows/test_moduleA_dispatch.yml
+
+  run_moduleB_tests:
+    needs: test_changed
+    if: ${{ needs.test_changed.outputs.moduleB_changed == 'true' || github.event_name == 'workflow_dispatch' }}
+    uses: ./.github/workflows/test_moduleB_dispatch.yml
+
+  run_moduleC_tests:
+    needs: test_changed
+    if: ${{ needs.test_changed.outputs.moduleC_changed == 'true' || github.event_name == 'workflow_dispatch' }}
+    uses: ./.github/workflows/test_moduleC_dispatch.yml
+
+  # The one check that the branch ruleset of main requires. The module checks cannot be required one by one,
+  # because a module check's name changes: "run_X_tests" when the job is skipped, "run_X_tests / run_x_tests (8.x)"
+  # when it runs.
+  # Timing: needs makes this job start only after every job listed has finished, so it never reports while a
+  # module test is still running. always() makes it run also when one of them failed or was cancelled.
+  # It passes only when test_changed passed and every module job passed or was skipped (paths filter did not match).
+  # test_changed is skipped on a review that is not an approval (comment, changes requested): no module is tested,
+  # so this check fails. GitHub counts the newest check of a name, so a pass there would hide an earlier failed run.
+  # After such a review, an approving review runs the tests again.
+  # The job id is the check name in the ruleset: rename it in both places. Every other job must be in needs;
+  # the first step checks that.
+  all_module_tests:
+    needs:
+      - test_changed
+      - run_moduleA_tests
+      - run_moduleB_tests
+      - run_moduleC_tests
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out the workflow files
+      uses: actions/checkout@v7
+      with:
+        sparse-checkout: .github/workflows
+    - name: Fail when a job of this workflow is missing from needs
+      # A job missing from needs may still be running when this check reports, and its result is not checked.
+      run: |
+        # GITHUB_WORKFLOW_REF is "<owner>/<repo>/<path of this workflow file>@<ref>"
+        workflowFile="${GITHUB_WORKFLOW_REF#"$GITHUB_REPOSITORY"/}"
+        workflowFile="${workflowFile%@*}"
+        allJobs=$(yq '.jobs | keys | .[]' "$workflowFile")
+        neededJobs=$(yq ".jobs.$GITHUB_JOB.needs[]" "$workflowFile")
+        missingJobs=""
+        for job in $allJobs; do
+          if [ "$job" != "$GITHUB_JOB" ] && ! echo "$neededJobs" | grep -qx "$job"; then
+            missingJobs="$missingJobs $job"
+          fi
+        done
+        if [ -n "$missingJobs" ]; then
+          # ::error:: lines also show on the run's summary page
+          for job in $missingJobs; do
+            echo "::error::$job is missing from the needs of $GITHUB_JOB in $workflowFile"
+          done
+          exit 1
+        fi
+        echo "needs lists all $(echo "$neededJobs" | wc -l) other jobs of $workflowFile."
+    - name: Fail unless test_changed passed and every module job passed or was skipped
+      env:
+        NEEDS_CONTEXT: ${{ toJSON(needs) }}
+      run: |
+        echo "Result per job (success, failure, cancelled or skipped):"
+        echo "$NEEDS_CONTEXT" | jq -r 'to_entries[] | "  \(.key): \(.value.result)"'
+        testChangedResult=$(echo "$NEEDS_CONTEXT" | jq -r '.test_changed.result')
+        if [ "$testChangedResult" = "skipped" ]; then
+          echo "::error::No module was tested: this run came from a review that is not an approval, so test_changed was skipped. An approving review runs the tests."
+          exit 1
+        fi
+        if [ "$testChangedResult" != "success" ]; then
+          echo "::error::No module was tested: test_changed ended with $testChangedResult."
+          exit 1
+        fi
+        failedJobs=$(echo "$NEEDS_CONTEXT" | jq -r 'to_entries[] | select(.value.result == "failure" or .value.result == "cancelled") | .key')
+        if [ -n "$failedJobs" ]; then
+          for failedJob in $failedJobs; do
+            echo "::error::$failedJob failed or was cancelled"
+          done
+          exit 1
+        fi
+        echo "test_changed passed, and every module job passed or was skipped."
