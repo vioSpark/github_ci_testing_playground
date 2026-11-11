@@ -1,14 +1,14 @@
 # Playground for one question: does a red job that runs after a green required check block the merge?
-# Ruleset "required-check-test" on branch test/required-check-base requires only the check "required_gate".
+# Ruleset "required-check-test" on main requires only the check "required_gate" (main also needs 1 approving review).
 # Labels on the pull request choose which job fails. Adding or removing a label starts a new run.
 #   required-red    makes required_gate fail (the required check)
 #   downstream-red  makes downstream fail (runs after required_gate, not required)
-# The base branch is a throwaway branch: merging this pull request does not touch main.
+# Never merge this pull request: its base is main.
 name: Required check hypothesis
 
 on:
   pull_request:
-    branches: [test/required-check-base]
+    branches: [main]
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
 # A newer run (label change or push) cancels the one still running, so the checks list stays readable.
