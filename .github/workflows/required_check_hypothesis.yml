@@ -11,7 +11,7 @@ jobs:
   required_gate:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Control run: the required check fails." && exit 1
+      - run: echo "Control run, the required check fails." && exit 1
 
   downstream_red:
     needs: required_gate
