@@ -1,0 +1,24 @@
+name: Test Module C
+
+# Mirror of a traco6.0 test_<module>_dispatch.yml: a reusable workflow with one job and an 8.x matrix,
+# so its check is named "run_moduleC_tests / run_modulec_tests (8.x)" when it runs.
+# PLAYGROUND ONLY: label fail-C makes the job fail; label slow-C makes it take 60 seconds.
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  run_modulec_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dotnet-version: ['8.x']
+    steps:
+    - name: Test Module C
+      env:
+        FAIL: ${{ contains(github.event.pull_request.labels.*.name, 'fail-C') }}
+        SLOW: ${{ contains(github.event.pull_request.labels.*.name, 'slow-C') }}
+      run: |
+        echo "label fail-C present = $FAIL, label slow-C present = $SLOW"
+        if [ "$SLOW" = "true" ]; then sleep 60; fi
+        if [ "$FAIL" = "true" ]; then exit 1; fi
