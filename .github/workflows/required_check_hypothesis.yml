@@ -1,22 +1,39 @@
-# Test of one question: does a red job that runs after a green required check block the merge?
+# Playground for one question: does a red job that runs after a green required check block the merge?
 # Ruleset "required-check-test" on branch test/required-check-base requires only the check "required_gate".
-# The pull request into that branch is never merged.
+# Labels on the pull request choose which job fails. Adding or removing a label starts a new run.
+#   required-red    makes required_gate fail (the required check)
+#   downstream-red  makes downstream fail (runs after required_gate, not required)
+# The base branch is a throwaway branch: merging this pull request does not touch main.
 name: Required check hypothesis
 
 on:
   pull_request:
     branches: [test/required-check-base]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+# A newer run (label change or push) cancels the one still running, so the checks list stays readable.
+concurrency:
+  group: required-check-hypothesis-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   required_gate:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Control run, the required check fails." && exit 1
+      - name: Fail only when the pull request has the label required-red
+        env:
+          FAIL: ${{ contains(github.event.pull_request.labels.*.name, 'required-red') }}
+        run: |
+          echo "label required-red present = $FAIL"
+          if [ "$FAIL" = "true" ]; then exit 1; fi
 
-  downstream_red:
+  downstream:
     needs: required_gate
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          echo "This job starts after the required check and fails on purpose."
-          exit 1
+      - name: Fail only when the pull request has the label downstream-red
+        env:
+          FAIL: ${{ contains(github.event.pull_request.labels.*.name, 'downstream-red') }}
+        run: |
+          echo "label downstream-red present = $FAIL"
+          if [ "$FAIL" = "true" ]; then exit 1; fi
